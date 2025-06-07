@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+
+  jar-maker-22:
+    container_name: maven-jdk22
+    image: bahmanheydarinejad/jar-maker-22:v0.0.1
+    build:
+      context: .
+      dockerfile: DockerfileJDK22
+    environment:
+      GIT_REPO_URL: https://github.com/bahmanheydarinejad/sample-wallet-service.git
+      GIT_BRANCH: main
+    volumes:
+      - artifacts:/artifacts
+      - maven-cache:/root/.m2
+
+  mysql:
+    hostname: mysql
+    image: mysql:9
+    environment:
+      MYSQL_DATABASE: wallet-service
+      MYSQL_ROOT_PASSWORD: mysql_wallet_123
+    ports:
+      - "3306:3306"
+      - "33060:33060"
+    networks:
+      app-net:
+
+  wallet:
+    image: bahmanheydarinejad/wallet-service
+    hostname: wallet-service
+    container_name: wallet-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:8080"
+    depends_on:
+      - jar-maker-22
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/wallet-service
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: mysql_wallet_123
+      SERVER_PORT: 8080
+      LOGGING_LEVEL_ROOT: info
+      SPRING_PROFILES_ACTIVE: prod
+    volumes:
+      - artifacts:/artifacts
+    networks:
+      app-net:
+
+networks:
+  app-net:
+
+volumes:
+  artifacts:
+  maven-cache:
